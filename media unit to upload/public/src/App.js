@@ -59,6 +59,7 @@ function useAnimatedPresence(open, exitDuration = 260) {
 }
 function App() {
   const [orientation, setOrientation] = useState("horizontal");
+    const [fullViewport, setFullViewport] = useState(false);
   const [ridePhase, setRidePhase] = useState("welcome");
   const [view, setView] = useState("route");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -90,6 +91,7 @@ function App() {
   const [textLarge, setTextLarge] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [phoneState, setPhoneState] = useState("Not connected");
+    const [voiceHintVisible, setVoiceHintVisible] = useState(true);
   const previousRidePhase = useRef(ridePhase);
   const previousVoiceOpen = useRef(voiceOpen);
   const musicAudioRef = useRef(null);
@@ -334,14 +336,28 @@ function App() {
     setPhoneState
   };
   return React.createElement("div", {
-    className: "prototype-shell"
-  }, React.createElement(ControllerPanel, {
-    orientation: orientation,
-    setOrientation: setOrientation,
+    
+ 
+   className: `prototype-shell ${fullViewport ? "full-viewport" : ""}`
+  }, !fullViewport && React.createElement(ControllerPanel, {
+    
+ 
+   orientation: orientation,
+        fullViewport: fullViewport
+
+ 
+   onToggleMute: toggleMasterMute,
+        onEnterFullScreen: () => {
+          setOrientation(window.innerHeight > window.innerWidth ? "vertical" : "horizontal");
+          setFullViewport(true);
+  }
     onJump: jumpTo,
     muted: masterMuted,
-    onToggleMute: toggleMasterMute
-  }), React.createElement(MediaUnitFrame, {
+    
+ 
+ onToggleMute,
+      onEnterFullScreen
+    , React.createElement(MediaUnitFrame, {
     className: frameClass,
     orientation: orientation
   }, ridePhase === "welcome" ? React.createElement(WelcomeScreen, {
@@ -462,8 +478,11 @@ function App() {
     setQuickPanel: setQuickPanel,
     compact: menuOpen && !fullPage && view === "home",
     fullPage: fullPage,
+          voiceHintVisible: voiceHintVisible,
+          onDismissVoiceHint: () => setVoiceHintVisible(false),
     onVoice: () => {
       setQuickPanel(null);
+            setVoiceHintVisible(false);
       setVoiceOpen(true);
     },
     onSupport: () => {
@@ -565,7 +584,14 @@ function ControllerPanel({
   }, "Horizontal", React.createElement("br", null), "1200 \xD7 800"), React.createElement("button", {
     className: orientation === "vertical" ? "selected" : "",
     onClick: () => setOrientation("vertical")
-  }, "Vertical", React.createElement("br", null), "1080 \xD7 1920")), React.createElement("span", null, "Jump to"), React.createElement("div", {
+  
+ 
+  }, "Vertical", React.createElement("br", null), "1080 \xD7 1920")), React.createElement("button", {
+        className: "controller-full-screen",
+        onClick: onEnterFullScreen
+  }, React.createElement(Icon, {
+        name: "expand"
+  }), "Full screen"), React.createElement("span", null, "Jump to"), React.createElement("div", {
     className: "controller-jumps"
   }, destinations.map(([target, label]) => React.createElement("button", {
     key: target,
@@ -575,6 +601,7 @@ function ControllerPanel({
 function MediaUnitFrame({
   className,
   orientation,
+    fullViewport,
   children
 }) {
   const dimensions = orientation === "horizontal" ? {
@@ -587,6 +614,10 @@ function MediaUnitFrame({
   const [scale, setScale] = useState(1);
   useEffect(() => {
     function resizeFrame() {
+            if (fullViewport) {
+                      setScale(Math.min(window.innerWidth / dimensions.width, window.innerHeight / dimensions.height));
+                      return;
+            }
       const horizontalPadding = window.innerWidth < 700 ? 24 : 88;
       const verticalPadding = window.innerHeight < 700 ? 24 : 64;
       setScale(Math.min(1, (window.innerWidth - horizontalPadding) / dimensions.width, (window.innerHeight - verticalPadding) / dimensions.height));
@@ -594,20 +625,31 @@ function MediaUnitFrame({
     resizeFrame();
     window.addEventListener("resize", resizeFrame);
     return () => window.removeEventListener("resize", resizeFrame);
-  }, [dimensions.width, dimensions.height]);
+  
+ 
+  }, [dimensions.width, dimensions.height, fullViewport]);
   return React.createElement("div", {
-    className: "frame-stage",
-    style: {
-      width: dimensions.width * scale,
+    
+ 
+   className: `frame-stage ${fullViewport ? "full-viewport" : ""}`,
+        style: fullViewport ? {
+                width: "100vw",
+                height: "100vh"
+        } : {
+          width: dimensions.width * scale,
       height: dimensions.height * scale
     }
   }, React.createElement("section", {
-    className: className,
+    
+ 
+   className: `${className} ${fullViewport ? "full-viewport" : ""}`,
     style: {
       width: dimensions.width,
       height: dimensions.height,
-      transform: `scale(${scale})`
-    }
+      
+ 
+     transform: fullViewport ? `translate(-50%, -50%) scale(${scale})` : `scale(${scale})`
+      
   }, children));
 }
 function FixedInfoBar({
@@ -688,6 +730,8 @@ function FixedControlBar({
   setQuickPanel,
   compact,
   fullPage,
+    voiceHintVisible,
+    onDismissVoiceHint,
   onVoice,
   onSupport
 }) {
@@ -720,7 +764,9 @@ function FixedControlBar({
     onClick: onSupport
   }, React.createElement(Icon, {
     name: "support"
-  }), "Support"), !compact && fullPage === "media" && React.createElement(React.Fragment, null, React.createElement("button", {
+  
+ 
+  }), "Help"), !compact && fullPage === "media" && React.createElement(React.Fragment, null, React.createElement("button", {
     className: "control-button volume-page-action volume-lower-action",
     onClick: () => setMusicVolume(Math.max(0, musicVolume - 10)),
     "aria-label": "Lower volume"
@@ -767,14 +813,26 @@ function FixedControlBar({
     onNextSong: onNextSong,
     onOpen: () => toggleQuickPanel("music"),
     active: quickPanel === "music"
-  })), React.createElement("button", {
-    className: "control-button voice-action",
-    onClick: onVoice,
-    "aria-label": "Voice control"
+  })
+ 
+                                                                                                                                })), React.createElement("div", {
+        className: "voice-action-wrap"
+  }, voiceHintVisible && React.createElement("div", {
+        className: "voice-wake-hint",
+        role: "status"
+  }, React.createElement("span", null, "Start voice mode by saying \u201COK car\u201D"), React.createElement("button", {
+        onClick: onDismissVoiceHint,
+        "aria-label": "Dismiss voice tip"
   }, React.createElement(Icon, {
-    name: "voice"
-  }))));
-}
+        name: "close"
+  }))), React.createElement("button", {
+        className: "control-button voice-action",
+        onClick: onVoice,
+        "aria-label": "Voice control"
+  }, React.createElement(Icon, {
+        name: "voice"
+  })))));
+  
 function MediaDock({
   nowPlaying,
   musicPlaying,
@@ -962,11 +1020,18 @@ function WelcomeScreen({
 }) {
   return React.createElement("section", {
     className: "welcome-screen"
+  }, React.createElement("div", {
+        className: "welcome-header"
   }, React.createElement(CurrentConditions, null), React.createElement("div", {
+        className: "bliq-wordmark",
+        "aria-label": "Bliq"
+  }, "bliq")), React.createElement("div", {
     className: "welcome-copy"
   }, React.createElement("p", {
     className: "eyebrow"
-  }, "Bliq driverless"), React.createElement("h1", null, "Welcome aboard, ", mockRide.passengerName, "."), React.createElement("h2", null, "Please buckle up to start"), React.createElement(WelcomeRideSummary, null), React.createElement(PrivacyNotice, null)), React.createElement("button", {
+  
+ 
+  }, "Bliq driverless"), React.createElement("h1", null, "Welcome aboard, ", mockRide.passengerName, "."), React.createElement(WelcomeRideSummary, null)), React.createElement("button", {
     className: "start-ride-button",
     onClick: onStart
   }, "Tap to start the ride"));
@@ -1197,25 +1262,18 @@ function NavigationVisualization({
     name: "navigationArrow"
   })))), React.createElement("aside", {
     className: "route-summary"
-  }, React.createElement("h2", null, "Your route"), React.createElement(RouteRow, {
-    label: "Pickup",
+  
+ 
+  }, React.createElement(RouteRow, {
+        label: "From",
     value: mockRide.pickup
-  }), React.createElement(RouteRow, {
-    label: "Stop",
-    value: "Museum Island"
   }), React.createElement(RouteRow, {
     label: "Destination",
     value: mockRide.destination
-  }), React.createElement("button", {
-    onClick: openAddStop
-  }, React.createElement(Icon, {
-    name: "plus"
-  }), " Add stop"), React.createElement("button", {
-    onClick: openRouteDrawer
-  }, React.createElement(Icon, {
-    name: "edit"
-  }), " Change destination")));
-}
+  })
+ 
+                             })));
+  
 function RouteEditDrawer({
   open,
   onClose,
@@ -1931,6 +1989,7 @@ function SupportOverlay({
   }, React.createElement("button", null, React.createElement(Icon, {
     name: "plus"
   }), " Call support"), React.createElement("button", {
+        className: "support-pull-over",
     onClick: onRequestPullOver
   }, "Request pull over"), React.createElement("button", {
     className: "support-cancel",
