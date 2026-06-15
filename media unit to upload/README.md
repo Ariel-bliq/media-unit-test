@@ -4,14 +4,22 @@ Interactive passenger UX prototype for the Bliq autonomous vehicle media unit.
 
 ## Upload to GitHub
 
-Upload all files and folders inside this directory to the root of the GitHub
-repository. Keep the `public` folder and everything inside it intact.
+Delete the current files from the GitHub repository, then upload all visible
+items inside this directory:
+
+- `index.html`
+- `src`
+- `vendor`
+- `README.md`
+
+`index.html` must be visible at the top level of the repository.
 
 ## Deploy with Vercel
 
 1. In Vercel, choose **Add New > Project**.
 2. Import the GitHub repository.
-3. Keep the detected project settings.
-4. Select **Deploy**.
+3. Set **Framework Preset** to **Other**.
+4. Leave **Build Command** and **Output Directory** empty.
+5. Select **Deploy**.
 
 No environment variables or external services are required.
